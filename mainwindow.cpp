@@ -70,8 +70,8 @@ void MainWindow::ReadXML(QString filename)
                     {
                       if(departments.at(i)->name==department_name)
                         {
+                          departments.at(i)->salary=(departments.at(i)->salary*departments.at(i)->count+current_dep.salary*current_dep.count)/(departments.at(i)->count+current_dep.count);
                           departments.at(i)->count+=current_dep.count;
-                          departments.at(i)->salary=(departments.at(i)->salary+current_dep.salary)/2;
                         }
                     }
                 }
@@ -147,15 +147,22 @@ void MainWindow::on_pushButton_5_clicked()
   auto fileName = QFileDialog::getOpenFileName(this,
                                                tr("Open Xml"), 0 , tr("XML files (*.xml)"));
   localPath=fileName;
+  if (localPath!="")
+    {
   ui->label_5->setText("Complete");
   ui->lineEdit->clear();
   ui->lineEdit_2->clear();
   ui->lineEdit_3->clear();
   ui->lineEdit_4->clear();
+  ui->lineEdit_5->clear();
+  ui->lineEdit_6->clear();
   ui->lineEdit->setDisabled(true);
   ui->lineEdit_2->setDisabled(true);
   ui->lineEdit_3->setDisabled(true);
   ui->lineEdit_4->setDisabled(true);
+  ui->lineEdit_5->setDisabled(true);
+  ui->lineEdit_6->setDisabled(true);
+    }
 
 }
 
@@ -165,20 +172,70 @@ void MainWindow::on_pushButton_clicked()
     ui->treeWidget_2->clear();
     if (ui->label_5->text()=="Complete"){
         ReadXML(localPath);
-          for(int i=0;i<departments.size();i++){
-              AddRoot(departments[i]->name,departments[i]->count,departments[i]->salary);
-              auto arg=members.equal_range(departments[i]);
-              for(auto j =arg.first; j!=arg.second;j++)
+      } else {
+          auto first_name=ui->lineEdit->text();
+          auto name=ui->lineEdit_5->text();
+          auto last_name=ui->lineEdit_6->text();
+          auto function=ui->lineEdit_3->text();
+          auto salary=ui->lineEdit_2->text();
+          auto department_name=ui->lineEdit_4->text();
+
+          Person pack;
+          pack.employee[0]=first_name;
+          pack.employee[1]=name;
+          pack.employee[2]=last_name;
+          pack.function=function;
+          pack.salary=salary.toFloat();
+
+          Department current_dep;
+          current_dep.name=department_name;
+          current_dep.count=1;
+          current_dep.salary=salary.toFloat();
+          if (names.find(department_name)==names.end())
+            {
+              departments.push_back(std::make_shared<Department>(std::move(current_dep)));
+              names.insert(std::make_pair(department_name,departments_count));
+              departments_count++;
+            }
+          else if(names.find(department_name)!=names.end())
+            {
+              for(int i=0;i<departments.size();i++)
                 {
-                          AddChild(ui->treeWidget_2->topLevelItem(i),
-                                        j->second.employee[0],
-                                        j->second.employee[1],
-                                        j->second.employee[2],
-                                        j->second.function,
-                                        j->second.salary);
+                  if(departments.at(i)->name==department_name)
+                    {
+                      /*
+                       * Неправильно рассчитывается средняя сумма
+                       */
+                      departments.at(i)->salary=(departments.at(i)->salary*departments.at(i)->count+current_dep.salary*current_dep.count)/(departments.at(i)->count+current_dep.count);
+                      departments.at(i)->count+=current_dep.count;
+                    }
                 }
             }
+             auto arg1=names[department_name];
+             members.insert(std::make_pair(departments.at(arg1),pack));
+             controlSystem.push_back(std::make_shared<std::multimap<std::shared_ptr<Department>,Person>>(members));
       }
+    for(int i=0;i<departments.size();i++){
+        AddRoot(departments[i]->name,departments[i]->count,departments[i]->salary);
+        auto arg=members.equal_range(departments[i]);
+        for(auto j =arg.first; j!=arg.second;j++)
+          {
+                    AddChild(ui->treeWidget_2->topLevelItem(i),
+                                  j->second.employee[0],
+                                  j->second.employee[1],
+                                  j->second.employee[2],
+                                  j->second.function,
+                                  j->second.salary);
+          }
+      }
+    localPath="";
+    ui->label_5->text()="";
+    ui->lineEdit->setDisabled(false);
+    ui->lineEdit_2->setDisabled(false);
+    ui->lineEdit_3->setDisabled(false);
+    ui->lineEdit_4->setDisabled(false);
+    ui->lineEdit_5->setDisabled(false);
+    ui->lineEdit_6->setDisabled(false);
 }
 
 void MainWindow::AddRoot(QString name,float count,float salary)
